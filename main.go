@@ -14,17 +14,17 @@ type Task struct{
     Completed bool `json:"completed"`
 }
 
-type Response struct{
-    Data []Task
-}
 
 var tasks = []Task{
         {1,"Lavarme los dientes",false},
         {2,"Terminar tarea de Frontend",false},
-        {3,"Preparar unos taquitos de carne asada aca bien sabrosos",true},
+        {3,"Preparar unos taquitos de carne asada aca bien sabrosos",false},
         {4,"Ir al gimnasio",false},
         {5,"Tomar un bañito y echarme una pestañita",true},
     }
+
+var completedTask []Task
+var contador = 5
 
 func main(){
 	mux := http.NewServeMux()
@@ -33,18 +33,19 @@ func main(){
     mux.HandleFunc("GET /tasks/{id}", getTaskByID)
     mux.HandleFunc("POST /tasks", createTask)
     mux.HandleFunc("DELETE /tasks/{id}", deleteTask)
+    mux.HandleFunc("PATCH /tasks/{id}", toggleTask)
 
 	c := cors.New(cors.Options{
         AllowedOrigins:   []string{"http://127.0.0.1:5500"},
-        AllowedMethods:   []string{"GET", "POST", "DELETE", "OPTIONS"},
+        AllowedMethods:   []string{"GET", "POST", "DELETE", "OPTIONS", "PATCH", "PUT"},
         AllowedHeaders:   []string{"Content-Type"},
         AllowCredentials: true,
     })
 
 	handler := c.Handler(mux)
 
-	fmt.Printf("Inicializando servidor en puerto %d",80)
-	http.ListenAndServe(":80", handler)
+	fmt.Printf("Inicializando servidor en puerto %d\n",3000)
+	http.ListenAndServe(":3000", handler)
 }
 func getTasks(w http.ResponseWriter, r *http.Request){
 	w.Header().Set("Content-Type", "application/json")
@@ -54,13 +55,15 @@ func getTasks(w http.ResponseWriter, r *http.Request){
 func createTask(w http.ResponseWriter, r *http.Request){
 	var newTask Task
 
-	error := json.NewDecoder(r.Body).Decode(&newTask)
+	err := json.NewDecoder(r.Body).Decode(&newTask)
 
-	if error != nil{
-		message := error.Error()
+	if err != nil{
+		message := err.Error()
 		http.Error(w, message, http.StatusBadRequest)
 		return
 	}
+	newTask.Id = contador + 1
+	contador++
 	tasks = append(tasks, newTask)
 
 	w.Header().Set("Content-Type", "application/json")
@@ -72,8 +75,8 @@ func createTask(w http.ResponseWriter, r *http.Request){
 }
 func deleteTask(w http.ResponseWriter, r *http.Request){
 	param := r.PathValue("id")
-	id, error := strconv.Atoi(param)
-	if error != nil {
+	id, err := strconv.Atoi(param)
+	if err != nil {
 		message := fmt.Sprintf("Couldnt convert %s", param)
 		http.Error(w, message, http.StatusBadRequest)
 		return
@@ -86,7 +89,7 @@ func deleteTask(w http.ResponseWriter, r *http.Request){
 		http.Error(w, message, http.StatusNotFound)
 		return
 	}
-	tasks = append(tasks[:i], tasks[i+1:]...)
+	deleteTodo(i, &tasks)
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(tasks)
@@ -100,11 +103,15 @@ func search(id int, t []Task) (index int, ok bool){
     }
     return -1, false
 }
+func deleteTodo(index int, t *[]Task){
+	*t = append((*t)[:index], (*t)[index+1:]...)
+
+}
 
 func getTaskByID(w http.ResponseWriter, r *http.Request){
 	value := r.PathValue("id")
-	id, error := strconv.Atoi(value)
-	if error != nil{
+	id, err := strconv.Atoi(value)
+	if err != nil{
 		http.Error(w, "Not a number", http.StatusBadRequest)
 		return
 	}
@@ -121,4 +128,25 @@ func getTaskByID(w http.ResponseWriter, r *http.Request){
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(task)
 
+}
+
+func toggleTask(w http.ResponseWriter, r *http.Request){
+	value := r.PathValue("id")
+	id, err := strconv.Atoi(value)
+	if err != nil{
+		http.Error(w, "Not a number", http.StatusBadRequest)
+		return
+	}
+
+	i, ok := search(id, tasks);
+
+	if !ok{
+		mensaje := fmt.Sprintf("Task with ID: %d not found", id)
+		http.Error(w, mensaje, http.StatusNotFound)
+		return
+	}
+	tasks[i].Completed = !tasks[i].Completed
+
+    w.Header().Set("Content-Type", "application/json")
+    json.NewEncoder(w).Encode(tasks)
 }
