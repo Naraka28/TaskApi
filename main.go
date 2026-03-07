@@ -14,6 +14,10 @@ type Task struct{
     Completed bool `json:"completed"`
 }
 
+type UpdateTitle struct {
+	Title string `json:"title"`
+}
+
 
 var tasks = []Task{
         {1,"Lavarme los dientes",false},
@@ -33,7 +37,9 @@ func main(){
     mux.HandleFunc("GET /tasks/{id}", getTaskByID)
     mux.HandleFunc("POST /tasks", createTask)
     mux.HandleFunc("DELETE /tasks/{id}", deleteTask)
+    mux.HandleFunc("DELETE /tasks", deleteAll)
     mux.HandleFunc("PATCH /tasks/{id}", toggleTask)
+    mux.HandleFunc("PUT /tasks/{id}", editTask)
 
 	c := cors.New(cors.Options{
         AllowedOrigins:   []string{"http://127.0.0.1:5500"},
@@ -53,6 +59,8 @@ func getTasks(w http.ResponseWriter, r *http.Request){
 
 }
 func createTask(w http.ResponseWriter, r *http.Request){
+	defer r.Body.Close()
+
 	var newTask Task
 
 	err := json.NewDecoder(r.Body).Decode(&newTask)
@@ -149,4 +157,36 @@ func toggleTask(w http.ResponseWriter, r *http.Request){
 
     w.Header().Set("Content-Type", "application/json")
     json.NewEncoder(w).Encode(tasks)
+}
+
+func deleteAll(w http.ResponseWriter, r *http.Request){
+	tasks = nil
+
+	w.Header().Set("Content-Type", "application/json")
+    json.NewEncoder(w).Encode(tasks)
+}
+
+func editTask(w http.ResponseWriter, r *http.Request){
+	defer r.Body.Close()
+	var body UpdateTitle
+	value := r.PathValue("id")
+	err := json.NewDecoder(r.Body).Decode(&body)
+
+	id, err := strconv.Atoi(value)
+	if err != nil{
+		http.Error(w, "Not a number", http.StatusBadRequest)
+		return
+	}
+
+	i, ok := search(id, tasks);
+
+	if !ok{
+		mensaje := fmt.Sprintf("Task with ID: %d not found", id)
+		http.Error(w, mensaje, http.StatusNotFound)
+		return
+	}
+	tasks[i].Title = body.Title
+	w.Header().Set("Content-Type", "application/json")
+    json.NewEncoder(w).Encode(tasks[i])	
+
 }
