@@ -42,7 +42,7 @@ func main(){
     mux.HandleFunc("PUT /tasks/{id}", editTask)
 
 	c := cors.New(cors.Options{
-        AllowedOrigins:   []string{"http://127.0.0.1:5500"},
+        AllowedOrigins:   []string{"*"},
         AllowedMethods:   []string{"GET", "POST", "DELETE", "OPTIONS", "PATCH", "PUT"},
         AllowedHeaders:   []string{"Content-Type"},
         AllowCredentials: true,
