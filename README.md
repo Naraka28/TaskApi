@@ -1,10 +1,11 @@
-#Task Manager - Backend
+# Task Manager - Backend
+
 RESTful API contruida con [Go](https://go.dev/), encargada de manejar peticiones HTTP para obtener, editar o eliminar tareas.
 
 ## Tecnologías Utilizadas
 
 - **Lenguaje:** Go
-- **Despliegue:** Github Pages
+- **Despliegue:** Render
 
 ## Requisitos Previos
 
