@@ -3,6 +3,10 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"go-server/database"
+	"go-server/internal/middleware"
+	"go-server/internal/task"
+	"go-server/internal/user"
 	"net/http"
 	"strconv"
 
@@ -31,15 +35,34 @@ var completedTask []Task
 var contador = 5
 
 func main(){
+	db, err := database.InitDb()
+	if err != nil {
+		fmt.Printf("Error initialacing db connection: %v", err)
+	}
+
+	taskRepo := task.NewRepository(db)
+	taskHandler := task.NewHandler(taskRepo)
+
+	userRepo := user.NewRepository(db)
+	userHandler := user.NewHandler(userRepo)
+
+
+
 	mux := http.NewServeMux()
 
-	mux.HandleFunc("GET /tasks", getTasks)
+	mux.Handle("GET /tasks", middleware.JWTMiddleware(http.HandlerFunc(taskHandler.GetAll)))
     mux.HandleFunc("GET /tasks/{id}", getTaskByID)
     mux.HandleFunc("POST /tasks", createTask)
     mux.HandleFunc("DELETE /tasks/{id}", deleteTask)
     mux.HandleFunc("DELETE /tasks", deleteAll)
     mux.HandleFunc("PATCH /tasks/{id}", toggleTask)
     mux.HandleFunc("PUT /tasks/{id}", editTask)
+
+	mux.HandleFunc("GET /users",userHandler.GetAll)
+    mux.HandleFunc("POST /users", userHandler.Register)
+	mux.HandleFunc("POST /login", userHandler.Login)
+
+    // mux.Handle("POST /tasks", middleware.JWTMiddleware(http.HandlerFunc(taskHandler.Create)))
 
 	c := cors.New(cors.Options{
         AllowedOrigins:   []string{"*"},
@@ -53,11 +76,7 @@ func main(){
 	fmt.Printf("Inicializando servidor en puerto %d\n",3000)
 	http.ListenAndServe(":3000", handler)
 }
-func getTasks(w http.ResponseWriter, r *http.Request){
-	w.Header().Set("Content-Type", "application/json")
-    json.NewEncoder(w).Encode(tasks)
 
-}
 func createTask(w http.ResponseWriter, r *http.Request){
 	defer r.Body.Close()
 
