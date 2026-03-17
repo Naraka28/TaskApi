@@ -49,7 +49,9 @@ func (handler *UserHandler) Register(w http.ResponseWriter, r *http.Request){
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(id)
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"id": id,
+	})
 }
 
 func (handler *UserHandler) Login(w http.ResponseWriter, r *http.Request){
