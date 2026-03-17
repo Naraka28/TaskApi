@@ -59,8 +59,8 @@ func (tr *TaskRepository) Delete(taskID int, userID int) error {
     return nil
 }
 
-func (tr *TaskRepository) ToggleTask(taskID int) (Task, error) {
-    result, err := tr.db.Exec("UPDATE tasks SET completed = NOT completed WHERE id = ?", taskID)
+func (tr *TaskRepository) ToggleTask(taskID int, userId int) (Task, error) {
+    result, err := tr.db.Exec("UPDATE tasks SET completed = NOT completed WHERE id = ? AND userId = ?", taskID, userId)
     if err != nil {
         return Task{}, err
     }
@@ -79,8 +79,8 @@ func (tr *TaskRepository) DeleteAll(userID int) error {
 	return nil
 }
 
-func (tr *TaskRepository) Edit(taskID int, title string) (Task, error) {
-    result, err := tr.db.Exec("UPDATE tasks SET title = ? WHERE id = ?", title, taskID)
+func (tr *TaskRepository) Edit(taskID int, userId int ,title string) (Task, error) {
+    result, err := tr.db.Exec("UPDATE tasks SET title = ? WHERE id = ? AND userId = ?", title, taskID, userId)
     if err != nil {
         return Task{}, err
     }

@@ -17,7 +17,6 @@ func NewHandler(tr *TaskRepository) *TaskHandler {
 }
 
 func (h *TaskHandler) GetAll(w http.ResponseWriter, r *http.Request) {
-	// Extraemos el ID del contexto (puesto por tu middleware de Auth)
 	userID, ok := r.Context().Value("user_id").(int)
 	if !ok {
 		utils.SendJSONError(w, "Usuario no autenticado", http.StatusUnauthorized)
@@ -42,7 +41,6 @@ func (h *TaskHandler) Save(w http.ResponseWriter, r *http.Request) {
 	}
 	defer r.Body.Close()
 
-	// Forzamos que el UserId de la tarea sea el del usuario logueado
 	if userID, ok := r.Context().Value("user_id").(int); ok {
 		newTask.UserId = userID
 	}
@@ -60,12 +58,19 @@ func (h *TaskHandler) Save(w http.ResponseWriter, r *http.Request) {
 
 func (h *TaskHandler) Toggle(w http.ResponseWriter, r *http.Request) {
 	id, err := strconv.Atoi(r.PathValue("id"))
+	userID, ok := r.Context().Value("user_id").(int)
+
+	if !ok {
+		utils.SendJSONError(w, "Usuario no autenticado", http.StatusUnauthorized)
+		return
+	}
+
 	if err != nil {
 		utils.SendJSONError(w, "ID inválido", http.StatusBadRequest)
 		return
 	}
 
-	task, err := h.repo.ToggleTask(id)
+	task, err := h.repo.ToggleTask(id, userID)
 	if err != nil {
 		utils.SendJSONError(w, "No se pudo cambiar el estado", http.StatusNotFound)
 		return
@@ -77,6 +82,12 @@ func (h *TaskHandler) Toggle(w http.ResponseWriter, r *http.Request) {
 
 func (h *TaskHandler) Edit(w http.ResponseWriter, r *http.Request) {
 	id, _ := strconv.Atoi(r.PathValue("id"))
+	userID, ok := r.Context().Value("user_id").(int)
+	
+	if !ok {
+		utils.SendJSONError(w, "Usuario no autenticado", http.StatusUnauthorized)
+		return
+	}
 
 	var data UpdateTask
 	if err := json.NewDecoder(r.Body).Decode(&data); err != nil {
@@ -84,7 +95,7 @@ func (h *TaskHandler) Edit(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	task, err := h.repo.Edit(id,data.Title)
+	task, err := h.repo.Edit(id,userID,data.Title)
 	if err != nil {
 		utils.SendJSONError(w, "Error al editar tarea", http.StatusInternalServerError)
 		return

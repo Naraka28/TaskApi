@@ -51,14 +51,14 @@ func main(){
 	mux := http.NewServeMux()
 
 	mux.Handle("GET /tasks", middleware.JWTMiddleware(http.HandlerFunc(taskHandler.GetAll)))
-    mux.HandleFunc("GET /tasks/{id}", taskHandler.FindTaskById)
-    mux.HandleFunc("POST /tasks", taskHandler.Save)
-    mux.HandleFunc("DELETE /tasks/{id}", taskHandler.Delete)
-    mux.HandleFunc("DELETE /tasks", taskHandler.DeleteAll)
-    mux.HandleFunc("PATCH /tasks/{id}", taskHandler.Toggle)
-    mux.HandleFunc("PUT /tasks/{id}", taskHandler.Edit)
+    mux.Handle("GET /tasks/{id}", middleware.JWTMiddleware(http.HandlerFunc(taskHandler.FindTaskById)))
+    mux.Handle("POST /tasks", middleware.JWTMiddleware(http.HandlerFunc(taskHandler.Save)))
+    mux.Handle("DELETE /tasks/{id}", middleware.JWTMiddleware(http.HandlerFunc(taskHandler.Delete)))
+    mux.Handle("DELETE /tasks", middleware.JWTMiddleware(http.HandlerFunc(taskHandler.DeleteAll)))
+    mux.Handle("PATCH /tasks/{id}", middleware.JWTMiddleware(http.HandlerFunc(taskHandler.Toggle)))
+    mux.Handle("PUT /tasks/{id}", middleware.JWTMiddleware(http.HandlerFunc(taskHandler.Edit)))
 
-	mux.HandleFunc("GET /users",userHandler.GetAll)
+	mux.Handle("GET /users",middleware.JWTMiddleware(http.HandlerFunc(userHandler.GetAll)))
     mux.HandleFunc("POST /users", userHandler.Register)
 	mux.HandleFunc("POST /login", userHandler.Login)
 
