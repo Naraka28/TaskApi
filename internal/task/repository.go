@@ -5,168 +5,102 @@ import (
 	"fmt"
 )
 
-type TaskRepository struct{
-	r *sql.DB
+type TaskRepository struct {
+	db *sql.DB
 }
 
-func NewRepository(db *sql.DB) *TaskRepository{
+func NewRepository(db *sql.DB) *TaskRepository {
 	return &TaskRepository{
-		r: db,
+		db: db,
 	}
 }
 
-func (tr *TaskRepository) GetTasks(id int) ([]Task, error){
-	var tasks []Task
-	rows, err := tr.r.Query("SELECT tasks.id, title, completed, userId FROM tasks INNER JOIN users ON tasks.userId = ?;", id)
-
+func (tr *TaskRepository) GetTasks(userID int) ([]Task, error) {
+	rows, err := tr.db.Query("SELECT id, title, completed, userId FROM tasks WHERE userId = ?", userID)
 	if err != nil {
-		return nil, fmt.Errorf("Retrieving Tasks: %v", err)
+		return nil, fmt.Errorf("error al obtener tareas: %v", err)
 	}
-
 	defer rows.Close()
 
-	for rows.Next(){
+	tasks := []Task{}
+	for rows.Next() {
 		var task Task
-		if err = rows.Scan(&task.Id, &task.Title, &task.Completed, &task.UserId); err != nil {
-			return nil, fmt.Errorf("Retrieving Tasks: %v", err)
+		if err := rows.Scan(&task.Id, &task.Title, &task.Completed, &task.UserId); err != nil {
+			return nil, err
 		}
 		tasks = append(tasks, task)
 	}
-	if err = rows.Err(); err != nil {
-		return nil, fmt.Errorf("Retrieving Tasks: %v", err)
-	}
 	return tasks, nil
-
 }
-// func createTask(w http.ResponseWriter, r *http.Request){
-// 	defer r.Body.Close()
 
-// 	var newTask Task
+func (tr *TaskRepository) Save(task TaskForm) (Task, error) {
+	result, err := tr.db.Exec("INSERT INTO tasks(title, completed, userId) VALUES(?,?,?)", task.Title, task.Completed, task.UserId)
+	if err != nil {
+		return Task{}, fmt.Errorf("error al crear tarea: %v", err)
+	}
 
-// 	err := json.NewDecoder(r.Body).Decode(&newTask)
+	id, err := result.LastInsertId()
+	if err != nil {
+		return Task{}, fmt.Errorf("error al obtener ID insertado: %v", err)
+	}
 
-// 	if err != nil{
-// 		message := err.Error()
-// 		http.Error(w, message, http.StatusBadRequest)
-// 		return
-// 	}
-// 	newTask.Id = contador + 1
-// 	contador++
-// 	tasks = append(tasks, newTask)
+	return tr.FindTaskById(int(id))
+}
 
-// 	w.Header().Set("Content-Type", "application/json")
-// 	w.WriteHeader(http.StatusCreated)
+func (tr *TaskRepository) Delete(taskID int, userID int) error {
+    result, err := tr.db.Exec("DELETE FROM tasks WHERE id = ? AND userId = ?", taskID, userID)
+    if err != nil {
+        return err
+    }
+    rows, _ := result.RowsAffected()
+    if rows == 0 {
+        return fmt.Errorf("tarea no encontrada o no tienes permiso")
+    }
+    return nil
+}
 
-// 	json.NewEncoder(w).Encode(newTask)
+func (tr *TaskRepository) ToggleTask(taskID int) (Task, error) {
+    result, err := tr.db.Exec("UPDATE tasks SET completed = NOT completed WHERE id = ?", taskID)
+    if err != nil {
+        return Task{}, err
+    }
+    rows, _ := result.RowsAffected()
+    if rows == 0 {
+        return Task{}, fmt.Errorf("permiso denegado o tarea inexistente")
+    }
+    return tr.FindTaskById(taskID)
+}
 
+func (tr *TaskRepository) DeleteAll(userID int) error {
+	_, err := tr.db.Exec("DELETE FROM tasks WHERE userId = ?", userID)
+	if err != nil {
+		return fmt.Errorf("no se pudieron borrar las tareas: %v", err)
+	}
+	return nil
+}
 
-// }
-// func deleteTask(w http.ResponseWriter, r *http.Request){
-// 	param := r.PathValue("id")
-// 	id, err := strconv.Atoi(param)
-// 	if err != nil {
-// 		message := fmt.Sprintf("Couldnt convert %s", param)
-// 		http.Error(w, message, http.StatusBadRequest)
-// 		return
-// 	}
+func (tr *TaskRepository) Edit(taskID int, title string) (Task, error) {
+    result, err := tr.db.Exec("UPDATE tasks SET title = ? WHERE id = ?", title, taskID)
+    if err != nil {
+        return Task{}, err
+    }
+    rows, _ := result.RowsAffected()
+    if rows == 0 {
+        return Task{}, fmt.Errorf("permiso denegado")
+    }
+    return tr.FindTaskById(taskID)
+}
 
-// 	i, ok := search(id, tasks)
+func (tr *TaskRepository) FindTaskById(id int) (Task, error) {
+	var task Task
+	err := tr.db.QueryRow("SELECT id, title, completed, userId FROM tasks WHERE id = ?", id).
+		Scan(&task.Id, &task.Title, &task.Completed, &task.UserId)
 
-// 	if !ok{
-// 		message := fmt.Sprintf("Coulndt delete taks with ID: %d",id)
-// 		http.Error(w, message, http.StatusNotFound)
-// 		return
-// 	}
-// 	deleteTodo(i, &tasks)
-
-// 	w.Header().Set("Content-Type", "application/json")
-// 	json.NewEncoder(w).Encode(tasks)
-
-// }
-// func search(id int, t []Task) (index int, ok bool){
-//     for i, task := range t{
-//         if task.Id == id {
-//             return i, true
-//         }
-//     }
-//     return -1, false
-// }
-// func deleteTodo(index int, t *[]Task){
-// 	*t = append((*t)[:index], (*t)[index+1:]...)
-
-// }
-
-// func getTaskByID(w http.ResponseWriter, r *http.Request){
-// 	value := r.PathValue("id")
-// 	id, err := strconv.Atoi(value)
-// 	if err != nil{
-// 		http.Error(w, "Not a number", http.StatusBadRequest)
-// 		return
-// 	}
-
-// 	i, ok := search(id, tasks);
-
-// 	if !ok{
-// 		mensaje := fmt.Sprintf("Task with ID: %d not found", id)
-// 		http.Error(w, mensaje, http.StatusNotFound)
-// 		return
-// 	}
-
-// 	task := tasks[i]
-// 	w.Header().Set("Content-Type", "application/json")
-// 	json.NewEncoder(w).Encode(task)
-
-// }
-
-// func toggleTask(w http.ResponseWriter, r *http.Request){
-// 	value := r.PathValue("id")
-// 	id, err := strconv.Atoi(value)
-// 	if err != nil{
-// 		http.Error(w, "Not a number", http.StatusBadRequest)
-// 		return
-// 	}
-
-// 	i, ok := search(id, tasks);
-
-// 	if !ok{
-// 		mensaje := fmt.Sprintf("Task with ID: %d not found", id)
-// 		http.Error(w, mensaje, http.StatusNotFound)
-// 		return
-// 	}
-// 	tasks[i].Completed = !tasks[i].Completed
-
-//     w.Header().Set("Content-Type", "application/json")
-//     json.NewEncoder(w).Encode(tasks)
-// }
-
-// func deleteAll(w http.ResponseWriter, r *http.Request){
-// 	tasks = nil
-
-// 	w.Header().Set("Content-Type", "application/json")
-//     json.NewEncoder(w).Encode(tasks)
-// }
-
-// func editTask(w http.ResponseWriter, r *http.Request){
-// 	defer r.Body.Close()
-// 	var body UpdateTitle
-// 	value := r.PathValue("id")
-// 	err := json.NewDecoder(r.Body).Decode(&body)
-
-// 	id, err := strconv.Atoi(value)
-// 	if err != nil{
-// 		http.Error(w, "Not a number", http.StatusBadRequest)
-// 		return
-// 	}
-
-// 	i, ok := search(id, tasks);
-
-// 	if !ok{
-// 		mensaje := fmt.Sprintf("Task with ID: %d not found", id)
-// 		http.Error(w, mensaje, http.StatusNotFound)
-// 		return
-// 	}
-// 	tasks[i].Title = body.Title
-// 	w.Header().Set("Content-Type", "application/json")
-//     json.NewEncoder(w).Encode(tasks[i])	
-
-// }
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return task, fmt.Errorf("tarea no encontrada")
+		}
+		return task, err
+	}
+	return task, nil
+}

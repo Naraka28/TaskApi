@@ -51,18 +51,17 @@ func main(){
 	mux := http.NewServeMux()
 
 	mux.Handle("GET /tasks", middleware.JWTMiddleware(http.HandlerFunc(taskHandler.GetAll)))
-    mux.HandleFunc("GET /tasks/{id}", getTaskByID)
-    mux.HandleFunc("POST /tasks", createTask)
-    mux.HandleFunc("DELETE /tasks/{id}", deleteTask)
-    mux.HandleFunc("DELETE /tasks", deleteAll)
-    mux.HandleFunc("PATCH /tasks/{id}", toggleTask)
-    mux.HandleFunc("PUT /tasks/{id}", editTask)
+    mux.HandleFunc("GET /tasks/{id}", taskHandler.FindTaskById)
+    mux.HandleFunc("POST /tasks", taskHandler.Save)
+    mux.HandleFunc("DELETE /tasks/{id}", taskHandler.Delete)
+    mux.HandleFunc("DELETE /tasks", taskHandler.DeleteAll)
+    mux.HandleFunc("PATCH /tasks/{id}", taskHandler.Toggle)
+    mux.HandleFunc("PUT /tasks/{id}", taskHandler.Edit)
 
 	mux.HandleFunc("GET /users",userHandler.GetAll)
     mux.HandleFunc("POST /users", userHandler.Register)
 	mux.HandleFunc("POST /login", userHandler.Login)
 
-    // mux.Handle("POST /tasks", middleware.JWTMiddleware(http.HandlerFunc(taskHandler.Create)))
 
 	c := cors.New(cors.Options{
         AllowedOrigins:   []string{"*"},

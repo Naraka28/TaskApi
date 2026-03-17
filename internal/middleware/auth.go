@@ -27,7 +27,7 @@ func JWTMiddleware(next http.Handler) http.Handler {
         })
 
         if err != nil || !token.Valid {
-            http.Error(w, "Token inválido o expirado", http.StatusUnauthorized)
+            utils.SendJSONError(w, "Token inválido o expirado", http.StatusUnauthorized)
             return
         }
         idInt, err := strconv.Atoi(claims.UserID)
