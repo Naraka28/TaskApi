@@ -14,8 +14,8 @@ func InitDb() (*sql.DB, error){
     cfg.User = os.Getenv("DBUSER")
     cfg.Passwd = os.Getenv("DBPASS")
     cfg.Net = "tcp"
-    cfg.Addr = "127.0.0.1:3306"
-    cfg.DBName = "gosql"
+    cfg.Addr = "switchback.proxy.rlwy.net:25070"
+    cfg.DBName = "railway"
 
     db, err := sql.Open("mysql", cfg.FormatDSN())
     if err != nil {
